@@ -33,6 +33,14 @@ seeded script.
 python3 data/generate_data.py
 ```
 
+If you would rather read the dataset than the generator,
+[`docs/dataset-walkthrough.xlsx`](docs/dataset-walkthrough.xlsx) takes the
+current year apart in Excel: the raw fact table, one customer traced from gross
+sales to contribution margin, and the full P&L rebuilt with live `SUMIFS` so
+the ladder assembles in front of you. It also demonstrates the trap the logic
+layer exists to avoid — filter overhead to a single customer and Excel answers
+zero, where the honest answer is "not available at this grain".
+
 ## What the dataset contains
 
 Italy only. Four scenarios — prior year actual, budget, current year actual
