@@ -15,11 +15,37 @@ costruzione e la qualità dell'analisi.
 - Forecast / Latest Estimate (rolling sui mesi rimanenti)
 
 ## Dimensioni dataset
+Un solo paese: Italia.
 - Mese
-- Business Unit / Regione
-- Categoria di prodotto
-- Voce di P&L: Revenue → COGS → Gross Profit → OPEX (per categoria) →
-  EBITDA → D&A → EBIT
+- Cliente (12), con canale (Modern Trade / Discount / Wholesale) e area
+  geografica come attributi, non come dimensioni del fact table
+- Categoria di prodotto (5)
+- Voce di P&L: Gross Sales → sconti on-invoice, trade spend promozionale e
+  non, resi → Net Revenue → COGS → Gross Profit → costi commerciali diretti
+  → Margine di contribuzione → overhead non allocato → EBITDA → D&A → EBIT
+
+Misure statistiche affiancate al P&L, fuori dalla scala: volumi in colli
+(baseline, incrementale, venduto in promozione), dimensione del mercato per
+categoria a volume e valore, listino per collo.
+
+## Regole del modello dati
+- Il P&L cliente si ferma al **margine di contribuzione**: G&A, R&D e D&A
+  sono tenuti solo a livello categoria, con `customer` null. Allocare
+  l'overhead al singolo cliente sarebbe finta precisione.
+- Il **COGS è guidato dai volumi** (colli × costo per collo), mai da una
+  percentuale del fatturato: altrimenti uno sconto ridurrebbe magicamente il
+  costo del venduto e falserebbe ogni calcolo promozionale.
+- Il dataset contiene **solo misure base, nessun KPI precalcolato**.
+  Pressione promozionale, gross-to-net, efficienza del trade spend, ROI
+  promo, quota di mercato e bridge prezzo/volume/mix si calcolano in
+  `/js/logic`.
+- I **subtotali non sono nel dataset**: sono descritti in
+  `meta.pnl_structure` e calcolati a valle, così la struttura del P&L non è
+  hardcoded in nessun grafico.
+- I valori sono **magnitudini positive**; il segno sta in
+  `meta.pnl_lines[].sign` (0 = riga statistica fuori dalla scala).
+- Il mercato è una **serie indipendente**, non derivata dai nostri volumi,
+  altrimenti la quota resterebbe costante per costruzione.
 
 ## Struttura cartelle
 - `/data` — script di generazione dati (Python) e dataset generato (JSON/CSV)
