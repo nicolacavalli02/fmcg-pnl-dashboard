@@ -71,6 +71,31 @@ categoria a volume e valore, listino per collo.
 ```bash
 python3 data/generate_data.py   # rigenera il dataset
 ```
+```bash
+node js/logic/checks.mjs        # verifica la logica di calcolo
+```
+```bash
+python3 -m http.server          # serve la pagina in locale
+```
+Il dataset viene caricato con `fetch`, quindi aprire `index.html` da
+filesystem non funziona (CORS): serve un server locale.
+
+`package.json` esiste solo per dichiarare `"type": "module"`, così i moduli
+ES sono importabili anche da Node per i check. Nessuna dipendenza, nessun
+build step.
+
+## Logica di calcolo (`/js/logic`)
+- `dataset.js` — caricamento, indicizzazione, lookup delle dimensioni
+- `aggregate.js` — filtri, aggregazione, risoluzione della scala di P&L
+- `metrics.js` — margini, gross-to-net, KPI promozionali, quota
+- `variance.js` — scostamenti fra scenari, con direzione del favorevole
+- `bridge.js` — waterfall di P&L e bridge prezzo/volume/mix
+- `index.js` — superficie pubblica: i grafici importano solo da qui
+- `checks.mjs` — self-check, incrociati con i numeri dello script Python
+
+Convenzione: una metrica restituisce `null`, non `0`, quando il dato sotto
+non è raggiungibile (EBITDA filtrato su un cliente, quota sotto il livello
+categoria). `null` significa "non rispondibile qui", e va reso come tale.
 
 ## Note
 Nessun dato reale o sensibile nel progetto. Dataset interamente sintetico,

@@ -1,0 +1,8 @@
+{
+  "name": "fmcg-pnl-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node js/logic/checks.mjs"
+  }
+}
