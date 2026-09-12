@@ -29,6 +29,8 @@ import {
   contributionBridge,
   averageListPrice,
   closedMonths,
+  ladderWaterfall,
+  metricsBy,
 } from "./index.js";
 
 const dataPath = fileURLToPath(
@@ -398,6 +400,93 @@ const openForecast = ladder(dataset, {
   months: { from: dataset.lastClosedMonth + 1, to: 12 },
 });
 check("the forecast still has open months to speak to", openForecast.value("net_revenue") > 0);
+
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 9. The waterfall walk and the per-dimension metrics
+// ---------------------------------------------------------------------------
+
+const fullYear = ladder(dataset, { scenario: "cy_actual" });
+const g2n = ladderWaterfall(dataset, fullYear, { to: "net_revenue" });
+
+check(
+  "the gross-to-net walk opens on gross sales and closes on net revenue",
+  g2n[0].id === "gross_sales" && g2n[g2n.length - 1].id === "net_revenue"
+);
+check(
+  "it breaks the discount block into its four lines",
+  g2n.filter((step) => !step.isTotal).length === 4
+);
+check(
+  "each step hands its running balance to the next",
+  g2n.slice(1).every((step, i) => step.isTotal || step.start === g2n[i].end)
+);
+// The opening bar is a level, not a subtotal, so it carries no residual to
+// check -- only the rows the ladder itself computes do.
+for (const step of g2n.filter((s) => typeof s.residual === "number")) {
+  near(`the walk lands on ${step.id} exactly`, step.residual, 0, 0.01);
+}
+near(
+  "the walk ends on the net revenue the ladder reports",
+  g2n[g2n.length - 1].end,
+  fullYear.value("net_revenue"),
+  0.01
+);
+
+const ebitdaWalk = ladderWaterfall(dataset, fullYear, {
+  to: "ebitda",
+  detail: false,
+});
+check(
+  "an undetailed walk keeps each group as one bar",
+  ebitdaWalk.filter((s) => !s.isTotal).length === 4
+);
+near(
+  "and still lands on EBITDA",
+  ebitdaWalk[ebitdaWalk.length - 1].end,
+  fullYear.value("ebitda"),
+  0.01
+);
+
+const byCategory = metricsBy(dataset, { scenario: "cy_actual" }, "category");
+check("metricsBy covers every category", byCategory.length === 5);
+near(
+  "its net revenue adds back to the total",
+  byCategory.reduce((total, e) => total + e.metrics.netRevenue, 0),
+  fullYear.value("net_revenue"),
+  1
+);
+check(
+  "promotional return spreads across the portfolio rather than sitting flat",
+  Math.max(...byCategory.map((e) => e.metrics.promoROI)) -
+    Math.min(...byCategory.map((e) => e.metrics.promoROI)) >
+    0.4
+);
+check(
+  "dairy is the worst promotional payback",
+  [...byCategory].sort(
+    (a, b) => a.metrics.promoROI - b.metrics.promoROI
+  )[0].key === "dairy"
+);
+check(
+  "and every category can still state its market share",
+  byCategory.every((e) => e.metrics.marketShareVolumePct > 0)
+);
+
+const customerMetrics = metricsBy(dataset, { scenario: "cy_actual" }, "customer");
+check(
+  "splitting by customer puts EBITDA out of reach on every bucket",
+  customerMetrics.every((e) => e.metrics.ebitda === null)
+);
+check(
+  "and market share with it, since the market is not held per customer",
+  customerMetrics.every((e) => e.metrics.marketShareVolumePct === null)
+);
+check(
+  "but contribution margin survives, which is the whole point of the grain",
+  customerMetrics.every((e) => e.metrics.contributionMargin > 0)
+);
 
 // ---------------------------------------------------------------------------
 

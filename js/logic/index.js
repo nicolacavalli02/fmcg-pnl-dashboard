@@ -27,13 +27,20 @@ export {
   resolveLadder,
   ladder,
   ladderBy,
+  ladderWaterfall,
   monthlySeries,
   cumulativeSeries,
   closedMonths,
   openMonths,
 } from "./aggregate.js";
 
-export { ratio, metricsFrom, metrics, averageListPrice } from "./metrics.js";
+export {
+  ratio,
+  metricsFrom,
+  metrics,
+  metricsBy,
+  averageListPrice,
+} from "./metrics.js";
 
 export {
   variance,

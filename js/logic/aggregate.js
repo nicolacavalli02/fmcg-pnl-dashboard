@@ -80,15 +80,67 @@ export function factMatches(dataset, fact, f) {
   return true;
 }
 
-/** Total every leaf line under a filter. Returns Map<lineId, number>. */
+/**
+ * Scan memo.
+ *
+ * A single dashboard render asks for the same totals several times over: the
+ * KPI tiles, the bridge and the P&L table all want the current scenario under
+ * the current filter, and each one was paying for its own full scan. Measured
+ * before adding this, a render spent about 45ms in aggregation and roughly a
+ * third of it was recomputing identical answers.
+ *
+ * The dataset is immutable once indexed, so a cached total can never go
+ * stale. Keyed per dataset through a WeakMap so a discarded dataset takes its
+ * cache with it, and capped so a long session cannot grow it without bound.
+ */
+const MEMO_LIMIT = 240;
+const memos = new WeakMap();
+
+function memo(dataset, key, compute) {
+  let cache = memos.get(dataset);
+  if (!cache) {
+    cache = new Map();
+    memos.set(dataset, cache);
+  }
+  if (cache.has(key)) return cache.get(key);
+  const value = compute();
+  // Cheapest useful eviction: once full, start again. Filter combinations
+  // arrive in bursts per render, so a cold cache refills in one pass.
+  if (cache.size >= MEMO_LIMIT) cache.clear();
+  cache.set(key, value);
+  return value;
+}
+
+/** Stable signature of a normalised filter, for the memo key. */
+function signature(f) {
+  const list = (set) => (set ? [...set].sort().join(",") : "*");
+  return [
+    f.scenario,
+    list(f.months),
+    list(f.customers),
+    list(f.channels),
+    list(f.areas),
+    list(f.categories),
+  ].join("|");
+}
+
+/**
+ * Total every leaf line under a filter. Returns Map<lineId, number>.
+ *
+ * The returned map is shared with other callers through the memo, so treat it
+ * as read-only. Everything downstream copies it before touching it:
+ * resolveLadder builds its own map from these totals.
+ */
 export function aggregate(dataset, filters) {
   const f = normaliseFilters(filters);
-  const totals = new Map();
-  for (const fact of dataset.factsFor(f.scenario)) {
-    if (!factMatches(dataset, fact, f)) continue;
-    totals.set(fact.line, (totals.get(fact.line) ?? 0) + fact.value);
-  }
-  return totals;
+  return memo(dataset, `t:${signature(f)}`, () => {
+    const totals = new Map();
+    for (const fact of dataset.factsFor(f.scenario)) {
+      if (!factMatches(dataset, fact, f)) continue;
+      totals.set(fact.line, (totals.get(fact.line) ?? 0) + fact.value);
+    }
+    return totals;
+  });
 }
 
 /**
@@ -98,18 +150,20 @@ export function aggregate(dataset, filters) {
  */
 export function aggregateBy(dataset, filters, dimension) {
   const f = normaliseFilters(filters);
-  const buckets = new Map();
-  for (const fact of dataset.factsFor(f.scenario)) {
-    if (!factMatches(dataset, fact, f)) continue;
-    const key = dimensionKey(dataset, fact, dimension);
-    let bucket = buckets.get(key);
-    if (!bucket) {
-      bucket = new Map();
-      buckets.set(key, bucket);
+  return memo(dataset, `b:${dimension}:${signature(f)}`, () => {
+    const buckets = new Map();
+    for (const fact of dataset.factsFor(f.scenario)) {
+      if (!factMatches(dataset, fact, f)) continue;
+      const key = dimensionKey(dataset, fact, dimension);
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = new Map();
+        buckets.set(key, bucket);
+      }
+      bucket.set(fact.line, (bucket.get(fact.line) ?? 0) + fact.value);
     }
-    bucket.set(fact.line, (bucket.get(fact.line) ?? 0) + fact.value);
-  }
-  return buckets;
+    return buckets;
+  });
 }
 
 /**
@@ -176,6 +230,68 @@ export function resolveLadder(dataset, leafTotals, customerScoped = false) {
     get: (id) => rows.find((row) => row.id === id),
     value: (id) => (available.get(id) === false ? null : values.get(id) ?? 0),
   };
+}
+
+/**
+ * Turn a resolved ladder into cumulative waterfall steps.
+ *
+ * Walks the structure from the top down to `to`, carrying a running balance
+ * so each cost line is a float hanging off the one before it, and each
+ * subtotal is a bar standing on zero. This is the arithmetic a gross-to-net
+ * or a P&L waterfall needs, and it lives here so two chart modules cannot
+ * drift into two slightly different versions of it.
+ *
+ * `detail` decides whether a multi-line group is broken into its components
+ * (the point of a gross-to-net chart) or shown as one bar.
+ */
+export function ladderWaterfall(
+  dataset,
+  resolved,
+  { to = "net_revenue", detail = true } = {}
+) {
+  const steps = [];
+  let running = 0;
+
+  for (const row of dataset.ladderRows) {
+    if (row.type === "group") {
+      const parts = detail ? row.components : [row.id];
+      for (const id of parts) {
+        const value = resolved.value(id) ?? 0;
+        const sign = dataset.signOf(id);
+        const delta = sign * value;
+        steps.push({
+          id,
+          label: dataset.labelOf(id),
+          sign,
+          value,
+          delta,
+          start: running,
+          end: running + delta,
+          // The opening bar stands on zero like a subtotal: it is a level,
+          // not a movement.
+          isTotal: steps.length === 0,
+        });
+        running += delta;
+      }
+    } else {
+      const value = resolved.value(row.id);
+      steps.push({
+        id: row.id,
+        label: row.label,
+        sign: 1,
+        value,
+        delta: null,
+        start: 0,
+        end: running,
+        isTotal: true,
+        // Should be zero: the running balance has to land on the subtotal the
+        // ladder itself reports. Exposed so a chart can prove it ties.
+        residual: value === null ? null : value - running,
+      });
+    }
+    if (row.id === to) break;
+  }
+  return steps;
 }
 
 /** Aggregate and resolve in one call: the usual entry point. */

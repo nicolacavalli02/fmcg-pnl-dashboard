@@ -16,73 +16,152 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
   <body>
-    <div class="shell">
-      <header class="page-header">
+    <header class="page-header">
+      <div class="shell header-inner">
         <div>
           <p class="eyebrow">FMCG Group &middot; Italy</p>
           <h1>Profit &amp; Loss Dashboard</h1>
         </div>
-        <dl class="context">
-          <div>
-            <dd id="ctx-period">&mdash;</dd>
-            <dt>Period</dt>
-          </div>
-          <div>
-            <dd id="ctx-revenue">&mdash;</dd>
-            <dt>Net revenue</dt>
-          </div>
-          <div>
-            <dd id="ctx-gap">&mdash;</dd>
-            <dt>vs budget</dt>
-          </div>
-          <div>
-            <dd id="ctx-margin">&mdash;</dd>
-            <dt>Gross margin</dt>
-          </div>
-        </dl>
-      </header>
+        <p class="period" id="period-label">&mdash;</p>
+      </div>
+    </header>
+
+    <div class="control-bar">
+      <div class="shell">
+        <div class="slicer-bar" id="slicers"></div>
+        <div class="context-bar" id="breadcrumb"></div>
+      </div>
+    </div>
+
+    <div class="shell">
+      <nav class="views" id="views" aria-label="Dashboard views"></nav>
 
       <main>
         <p class="status" id="status">Loading the dataset&hellip;</p>
 
-        <section class="card">
-          <div class="card-header">
-            <h2>Net revenue phasing</h2>
-            <p>
-              Monthly net revenue against plan, last year and the latest
-              estimate. The shaded months are still open: the actual line
-              stops at the close and only the forecast continues through to
-              December.
-            </p>
+        <section id="view-performance" hidden>
+          <div class="kpis" id="kpis"></div>
+
+          <div class="grid-2">
+            <section class="card">
+              <div class="card-header">
+                <h2>Net revenue phasing</h2>
+                <p>
+                  The shape of the year across all four scenarios. The shaded
+                  months are still open: the actual line stops at the close and
+                  only the forecast continues to December. Dimensional filters
+                  apply here, but the period slicer does not &mdash; a phasing
+                  chart cut to eight months is no longer a phasing chart.
+                </p>
+              </div>
+              <div class="chart-frame">
+                <canvas
+                  id="chart-phasing"
+                  role="img"
+                  aria-label="Monthly net revenue for actual, budget, prior year and forecast"
+                ></canvas>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <h2 id="title-bridge">Why the result moved</h2>
+                <p id="caption-bridge"></p>
+              </div>
+              <div class="chart-frame">
+                <canvas
+                  id="chart-bridge"
+                  role="img"
+                  aria-label="Waterfall of the movement between the two scenarios"
+                ></canvas>
+              </div>
+            </section>
           </div>
 
-          <div class="chart-frame">
-            <canvas
-              id="revenue-phasing"
-              role="img"
-              aria-label="Line chart of monthly net revenue for the current year actual, budget, prior year and forecast scenarios"
-            ></canvas>
-          </div>
+          <section class="card">
+            <div class="card-header">
+              <h2 id="title-drivers">Who is driving the gap</h2>
+              <p id="caption-drivers"></p>
+            </div>
+            <div class="chart-frame is-short">
+              <canvas
+                id="chart-drivers"
+                role="img"
+                aria-label="Net revenue variance by dimension, ranked"
+              ></canvas>
+            </div>
+          </section>
 
-          <ul class="legend" id="legend"></ul>
+          <section class="card">
+            <div class="card-header">
+              <h2>The P&amp;L</h2>
+              <p>
+                The full ladder against the selected comparison. Rows with a
+                <span class="inline-key">+</span> open into the lines that make
+                them up. Nothing below net revenue is stored in the dataset:
+                every subtotal is derived from the structure the data carries.
+              </p>
+            </div>
+            <div class="table-frame" id="pnl-table"></div>
+          </section>
+        </section>
 
-          <p class="note">
-            <strong>Reading the chart.</strong> The vertical axis is cut
-            rather than zero based: the four scenarios sit within three per
-            cent of each other, and a zero baseline would compress them into
-            an unreadable band. The floor is labelled on the axis, and the
-            exact gap against plan is in the tooltip. Books are closed through
-            <span id="closed-month">&mdash;</span>, so current year actuals
-            exist only up to that point and the forecast carries the rest of
-            the year.
+        <section id="view-commercial" class="roadmap" hidden>
+          <h2>Commercial</h2>
+          <p>
+            The gross-to-net story, on the same slicers and the same drill
+            path. Four analyses go here:
           </p>
+          <ul>
+            <li>
+              <strong>Gross-to-net waterfall</strong> &mdash; where the list
+              price goes before it reaches the top line, split into on-invoice
+              discounts, promotional and other trade spend, and returns.
+            </li>
+            <li>
+              <strong>Price, volume and mix bridge</strong> &mdash; how much of
+              the revenue movement is more cases, a different blend of them, a
+              different list price, and a different discount.
+            </li>
+            <li>
+              <strong>Realisation per case</strong> &mdash; list against gross
+              against net price by channel, which is the gross-to-net ratio
+              expressed in a unit a commercial team can argue about.
+            </li>
+            <li>
+              <strong>Promotional return</strong> &mdash; pressure against ROI,
+              sized by spend. Below 1.0 a promotion gives away more margin than
+              it earns back, and in this dataset that ranges from 0.27 in Dairy
+              to 0.82 in Personal Care.
+            </li>
+          </ul>
+        </section>
+
+        <section id="view-portfolio" class="roadmap" hidden>
+          <h2>Portfolio</h2>
+          <p>Who and what, rather than how much. Two analyses go here:</p>
+          <ul>
+            <li>
+              <strong>Contribution map</strong> &mdash; every customer plotted
+              by size against contribution margin, which is where the Discount
+              channel stops looking like growth.
+            </li>
+            <li>
+              <strong>Market share</strong> &mdash; ours against the category
+              market, actual against plan. It is the only view that separates a
+              soft market from lost competitiveness.
+            </li>
+          </ul>
         </section>
       </main>
 
       <footer class="page-footer">
-        Synthetic dataset. No real or sensitive data: the figures are
-        generated from FMCG benchmark ratios and the company, its customers
-        and its results are fictional.
+        Synthetic dataset. No real or sensitive data: the figures are generated
+        from FMCG benchmark ratios and the company, its customers and its
+        results are fictional.
+        <a href="https://github.com/nicolacavalli02/fmcg-pnl-dashboard"
+          >Source on GitHub</a
+        >
       </footer>
     </div>
 

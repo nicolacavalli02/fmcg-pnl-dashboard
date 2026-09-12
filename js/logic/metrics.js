@@ -11,7 +11,7 @@
  * which is a different statement from zero and should be rendered as such.
  */
 
-import { factMatches, ladder, normaliseFilters } from "./aggregate.js";
+import { factMatches, ladder, ladderBy, normaliseFilters } from "./aggregate.js";
 
 /** Divide, but return null instead of Infinity or NaN. */
 export function ratio(numerator, denominator) {
@@ -103,6 +103,23 @@ export function metricsFrom(dataset, resolved) {
 /** Aggregate and compute metrics in one call. */
 export function metrics(dataset, filters) {
   return metricsFrom(dataset, ladder(dataset, filters));
+}
+
+/**
+ * The same metrics, one set per member of a dimension.
+ *
+ * Feeds any chart that plots members against each other rather than against
+ * plan -- promotional pressure versus return, contribution versus size. Note
+ * that splitting by customer, channel or area scopes each bucket, so the
+ * metrics that need unallocated lines come back null per member, exactly as
+ * they should.
+ */
+export function metricsBy(dataset, filters, dimension) {
+  return ladderBy(dataset, filters, dimension).map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    metrics: metricsFrom(dataset, entry.ladder),
+  }));
 }
 
 /**
