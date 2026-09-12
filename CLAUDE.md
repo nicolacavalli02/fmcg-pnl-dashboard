@@ -63,9 +63,22 @@ categoria a volume e valore, listino per collo.
 
 ## Convenzioni
 - Commenti nel codice in inglese
-- Palette colori (Actual/Budget/LY/Forecast): ancora da definire — sceglierla
-  dopo il primo grafico e poi aggiornare questa riga con la scelta finale,
-  da applicare in modo coerente in tutti i grafici successivi
+- Palette colori — **decisa**, da applicare a tutti i grafici. Definita solo
+  in `css/style.css` come custom property; i moduli grafico la leggono a
+  runtime con `getComputedStyle`, non hanno valori hex propri.
+
+  | Scenario | Variabile | Light | Dark | Tratto |
+  |---|---|---|---|---|
+  | Actual | `--scenario-actual` | `#0b5563` | `#4bb8cc` | pieno, spesso |
+  | Forecast | `--scenario-forecast` | `#3e97a8` | `#2c7d8c` | **tratteggiato** |
+  | Budget | `--scenario-budget` | `#c98a2e` | `#e0a44a` | pieno |
+  | LY Actual | `--scenario-ly` | `#98a2ae` | `#7d8894` | pieno, sottile |
+
+  Logica: l'Actual è il protagonista e prende il tono più scuro e saturo;
+  il Forecast è lo stesso teal un passo più chiaro ed è **sempre
+  tratteggiato**, così resta provvisorio anche in bianco e nero; il Budget è
+  l'unico tono caldo, così piano e consuntivo non si confondono mai; l'anno
+  scorso è grigio neutro, contesto e mai soggetto.
 
 ## Comandi
 ```bash
@@ -92,6 +105,22 @@ build step.
 - `bridge.js` — waterfall di P&L e bridge prezzo/volume/mix
 - `index.js` — superficie pubblica: i grafici importano solo da qui
 - `checks.mjs` — self-check, incrociati con i numeri dello script Python
+
+`js/app.js` è il controller di pagina: carica il dataset una volta, riempie
+il DOM e chiama i grafici. Non calcola nulla (sta in `/js/logic`) e non
+disegna nulla (sta in `/js/charts`).
+
+## Convenzioni dei grafici
+- L'**actual si ferma al mese di chiusura**. Il generatore produce anche i
+  mesi aperti, ma un dashboard che li mostrasse esporrebbe numeri che
+  l'azienda non ha ancora. Oltre la chiusura parla solo il forecast.
+- Il **forecast parte dall'ultimo mese chiuso**, così prosegue la linea
+  dell'actual dal punto in cui coincidono, ed è sempre tratteggiato.
+- I mesi aperti hanno uno sfondo ombreggiato e una riga verticale al confine.
+- Asse Y **tagliato, non a zero**, sulle serie storiche a linee: la linea
+  codifica il movimento, e con scenari entro il 3% lo zero li comprimerebbe
+  in una banda illeggibile. Su grafici a barre invece lo zero è obbligatorio,
+  perché lì è la lunghezza a codificare il valore.
 
 Convenzione: una metrica restituisce `null`, non `0`, quando il dato sotto
 non è raggiungibile (EBITDA filtrato su un cliente, quota sotto il livello

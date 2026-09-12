@@ -1,0 +1,271 @@
+/*
+ * FMCG P&L Dashboard.
+ *
+ * The scenario palette is defined here and nowhere else. Chart modules read
+ * these custom properties at render time rather than carrying hex values of
+ * their own, so the four scenarios stay consistent across every chart and a
+ * theme change is a CSS edit, not a hunt through JavaScript.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* --- scenario palette ------------------------------------------------
+   * Actual is the hero and carries the darkest, most saturated tone.
+   * Forecast is the same teal family one step lighter, and is always drawn
+   * dashed: it has to read as "not yet real" even in greyscale.
+   * Budget is ochre, the one warm tone, so plan and actual never blur.
+   * Last year is neutral grey: context, never the subject.
+   */
+  --scenario-actual: #0b5563;
+  --scenario-forecast: #3e97a8;
+  --scenario-budget: #c98a2e;
+  --scenario-ly: #98a2ae;
+
+  /* --- surfaces and text ---------------------------------------------- */
+  --page: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #16202a;
+  --ink-soft: #5b6874;
+  --ink-faint: #8b97a3;
+  --line: #e2e7ec;
+  --line-strong: #cdd6de;
+  --open-period: rgba(11, 85, 99, 0.045);
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(22, 32, 42, 0.06),
+    0 8px 24px rgba(22, 32, 42, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    /* Lifted for contrast against a dark ground; the roles are unchanged. */
+    --scenario-actual: #4bb8cc;
+    --scenario-forecast: #2c7d8c;
+    --scenario-budget: #e0a44a;
+    --scenario-ly: #7d8894;
+
+    --page: #0e1419;
+    --surface: #161e26;
+    --ink: #e8edf2;
+    --ink-soft: #9aa8b5;
+    --ink-faint: #6f7d8a;
+    --line: #26313b;
+    --line-strong: #33404c;
+    --open-period: rgba(75, 184, 204, 0.06);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.55 "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures everywhere a number appears, so columns of digits line up
+   and a changing value does not shift the text beside it. */
+.figure,
+.context dd,
+.legend-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+/* --- header ------------------------------------------------------------ */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+h1 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 34px;
+  margin: 0;
+}
+
+.context div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.context dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.context dd {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.context dd.is-adverse {
+  color: var(--scenario-budget);
+}
+
+/* --- card -------------------------------------------------------------- */
+
+.card {
+  margin-top: 30px;
+  padding: 24px 26px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.card-header p {
+  margin: 5px 0 0;
+  max-width: 68ch;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.chart-frame {
+  position: relative;
+  height: 380px;
+  margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 28px 16px 48px;
+  }
+  .chart-frame {
+    height: 300px;
+  }
+  .context {
+    gap: 0 22px;
+  }
+}
+
+/* --- legend ------------------------------------------------------------ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.legend .swatch {
+  flex: none;
+  width: 22px;
+  height: 0;
+  border-top-width: 3px;
+  border-top-style: solid;
+  border-radius: 2px;
+  transform: translateY(-3px);
+}
+
+.legend .swatch.is-dashed {
+  border-top-style: dashed;
+}
+
+.legend-value {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* --- notes and footer -------------------------------------------------- */
+
+.note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+.note strong {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.page-footer {
+  margin-top: 34px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.status {
+  margin: 30px 0 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.status code {
+  padding: 1px 5px;
+  background: var(--page);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 12.5px;
+}

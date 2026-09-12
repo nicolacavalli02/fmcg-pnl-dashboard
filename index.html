@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FMCG P&amp;L Dashboard</title>
+    <meta
+      name="description"
+      content="Profit and loss dashboard for a fictional Italian FMCG group, built in vanilla HTML, CSS and JavaScript on a synthetic dataset."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b5563'/%3E%3Cpath d='M3 11.5 6 7l3 2.2L13 4' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">FMCG Group &middot; Italy</p>
+          <h1>Profit &amp; Loss Dashboard</h1>
+        </div>
+        <dl class="context">
+          <div>
+            <dd id="ctx-period">&mdash;</dd>
+            <dt>Period</dt>
+          </div>
+          <div>
+            <dd id="ctx-revenue">&mdash;</dd>
+            <dt>Net revenue</dt>
+          </div>
+          <div>
+            <dd id="ctx-gap">&mdash;</dd>
+            <dt>vs budget</dt>
+          </div>
+          <div>
+            <dd id="ctx-margin">&mdash;</dd>
+            <dt>Gross margin</dt>
+          </div>
+        </dl>
+      </header>
+
+      <main>
+        <p class="status" id="status">Loading the dataset&hellip;</p>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Net revenue phasing</h2>
+            <p>
+              Monthly net revenue against plan, last year and the latest
+              estimate. The shaded months are still open: the actual line
+              stops at the close and only the forecast continues through to
+              December.
+            </p>
+          </div>
+
+          <div class="chart-frame">
+            <canvas
+              id="revenue-phasing"
+              role="img"
+              aria-label="Line chart of monthly net revenue for the current year actual, budget, prior year and forecast scenarios"
+            ></canvas>
+          </div>
+
+          <ul class="legend" id="legend"></ul>
+
+          <p class="note">
+            <strong>Reading the chart.</strong> The vertical axis is cut
+            rather than zero based: the four scenarios sit within three per
+            cent of each other, and a zero baseline would compress them into
+            an unreadable band. The floor is labelled on the axis, and the
+            exact gap against plan is in the tooltip. Books are closed through
+            <span id="closed-month">&mdash;</span>, so current year actuals
+            exist only up to that point and the forecast carries the rest of
+            the year.
+          </p>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        Synthetic dataset. No real or sensitive data: the figures are
+        generated from FMCG benchmark ratios and the company, its customers
+        and its results are fictional.
+      </footer>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
