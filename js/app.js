@@ -309,9 +309,6 @@ async function start() {
   // --- wiring -----------------------------------------------------------------
 
   window.addEventListener("hashchange", () => state.adoptHash());
-  // The palette lives in CSS and follows the system theme, so the charts have
-  // to be rebuilt to pick up the new values.
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
 
   status.remove();
   render();

@@ -101,6 +101,10 @@ categoria a volume e valore, listino per collo.
 Il modello è il *management reporting pack*: un blocco d'intestazione che
 dichiara entità, periodo, base e valuta, poi tabelle a righe sottili di cifre
 tabulari. Da qui le scelte:
+- **Sfondo bianco, e resta bianco.** Un report si legge su bianco, e numeri e
+  colori dei grafici si confrontano meglio lì. La pagina **non** segue il tema
+  scuro di sistema; la palette scura esiste ma si attiva solo con
+  `data-theme="dark"` su `<html>`.
 - **Fascia superiore** in teal-inchiostro (`--band`) con brand, viste e la
   frase-testata. Sotto, tutto piatto e a filetto: niente ombre, raggio 3px.
 - **Tipografia**: *Bricolage Grotesque* (display, peso 300 nella testata e

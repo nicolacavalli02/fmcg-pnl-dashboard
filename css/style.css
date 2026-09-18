@@ -10,6 +10,11 @@
  *
  * Colour is defined here and nowhere else. Chart modules read these custom
  * properties at render time; none carries a hex value of its own.
+ *
+ * The page is white and stays white. A report is read on paper-white, and
+ * figures and chart colours are compared most easily against it, so the
+ * page does not follow the operating system's dark preference. The dark
+ * palette is kept and can be switched on with data-theme="dark" on <html>.
  */
 
 :root {
@@ -56,7 +61,7 @@
   --band-ink-soft: #9fbcc1;
   --band-line: rgba(231, 240, 241, 0.14);
 
-  --page: #f1f4f4;
+  --page: #ffffff;
   --surface: #ffffff;
   --raised: #ffffff;
   --ink: #141c22;
@@ -67,47 +72,45 @@
   --rule: #2b3a42;
   --open-period: rgba(11, 85, 99, 0.05);
   --hover: rgba(11, 85, 99, 0.06);
-  --estimate-bg: rgba(62, 151, 168, 0.06);
+  --estimate-bg: rgba(62, 151, 168, 0.07);
 
   --radius: 3px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --scenario-actual: #4bb8cc;
-    --scenario-forecast: #2c7d8c;
-    --scenario-budget: #e0a44a;
-    --scenario-ly: #7d8894;
+  --scenario-actual: #4bb8cc;
+  --scenario-forecast: #2c7d8c;
+  --scenario-budget: #e0a44a;
+  --scenario-ly: #7d8894;
 
-    --variance-favourable: #4fae82;
-    --variance-adverse: #d97a4e;
+  --variance-favourable: #4fae82;
+  --variance-adverse: #d97a4e;
 
-    --dim-a: #4bb8cc;
-    --dim-b: #b48ac4;
-    --dim-c: #9db85a;
-    --dim-d: #d97a4e;
-    --dim-e: #8ea0d6;
+  --dim-a: #4bb8cc;
+  --dim-b: #b48ac4;
+  --dim-c: #9db85a;
+  --dim-d: #d97a4e;
+  --dim-e: #8ea0d6;
 
-    --band: #061c21;
-    --band-ink: #e3eef0;
-    --band-ink-soft: #8fabb0;
-    --band-line: rgba(227, 238, 240, 0.12);
+  --band: #061c21;
+  --band-ink: #e3eef0;
+  --band-ink-soft: #8fabb0;
+  --band-line: rgba(227, 238, 240, 0.12);
 
-    --page: #0c1317;
-    --surface: #121b20;
-    --raised: #172229;
-    --ink: #e5ebed;
-    --ink-soft: #9caab4;
-    --ink-faint: #6b7a85;
-    --line: #22303a;
-    --line-strong: #33434f;
-    --rule: #b9c6cc;
-    --open-period: rgba(75, 184, 204, 0.07);
-    --hover: rgba(75, 184, 204, 0.08);
-    --estimate-bg: rgba(44, 125, 140, 0.14);
-  }
+  --page: #0c1317;
+  --surface: #121b20;
+  --raised: #172229;
+  --ink: #e5ebed;
+  --ink-soft: #9caab4;
+  --ink-faint: #6b7a85;
+  --line: #22303a;
+  --line-strong: #33434f;
+  --rule: #b9c6cc;
+  --open-period: rgba(75, 184, 204, 0.07);
+  --hover: rgba(75, 184, 204, 0.08);
+  --estimate-bg: rgba(44, 125, 140, 0.14);
 }
 
 /* ============================================================================
@@ -297,6 +300,7 @@ a {
   .control-bar {
     position: sticky;
     top: 0;
+    box-shadow: 0 1px 0 var(--line), 0 6px 14px -10px rgba(10, 30, 40, 0.25);
   }
 }
 
