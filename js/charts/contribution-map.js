@@ -82,7 +82,8 @@ export function createContributionMap(dataset, canvas, state) {
           if (!elements.length) return;
           const { datasetIndex, index } = elements[0];
           const p = datasets[datasetIndex].data[index];
-          state.drillInto("customer", p.key, p.label);
+          // Deferred past Chart.js's own event handling; see drivers.js.
+          queueMicrotask(() => state.drillInto("customer", p.key, p.label));
         },
         onHover: (event, elements) => {
           event.native.target.style.cursor = elements.length ? "pointer" : "default";

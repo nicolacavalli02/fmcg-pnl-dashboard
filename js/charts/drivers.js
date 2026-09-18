@@ -56,7 +56,10 @@ export function createDrivers(dataset, canvas, state) {
         onClick: (_event, elements) => {
           if (!elements.length) return;
           const row = rows[elements[0].index];
-          state.drillInto(dimension, row.key, row.label);
+          // Deferred past the end of Chart.js's own event handling: drilling
+          // re-renders the page and destroys this chart, and Chart.js still
+          // has an afterEvent pass to run on it once onClick returns.
+          queueMicrotask(() => state.drillInto(dimension, row.key, row.label));
         },
         onHover: (event, elements) => {
           event.native.target.style.cursor = elements.length ? "pointer" : "default";
