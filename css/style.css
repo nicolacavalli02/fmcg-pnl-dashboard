@@ -1,16 +1,25 @@
 /*
  * FMCG P&L Dashboard.
  *
- * The palette is defined here and nowhere else. Chart modules read these
- * custom properties at render time rather than carrying hex values of their
- * own, so the scenarios stay consistent across every chart and a theme change
- * is a CSS edit, not a hunt through JavaScript.
+ * The visual model is the management reporting pack: a header block that
+ * declares entity, period, basis and currency, then ruled tables of tabular
+ * figures. The deep band at the top is that header block; the masthead
+ * sentence inside it is generated from the state, so what the page shows is
+ * always said in words. Below the band everything is flat, ruled and quiet,
+ * so the numbers and the two accent hues do the talking.
+ *
+ * Colour is defined here and nowhere else. Chart modules read these custom
+ * properties at render time; none carries a hex value of its own.
  */
 
 :root {
   color-scheme: light;
 
-  /* --- scenario palette ------------------------------------------------
+  /* --- type ------------------------------------------------------------- */
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+
+  /* --- scenario palette ---------------------------------------------------
    * Actual is the hero and carries the darkest, most saturated tone.
    * Forecast is the same teal family one step lighter, and is always drawn
    * dashed: it has to read as "not yet real" even in greyscale.
@@ -22,39 +31,51 @@
   --scenario-budget: #c98a2e;
   --scenario-ly: #98a2ae;
 
-  /* --- variance palette -------------------------------------------------
-   * Separate from the scenarios, because favourable and adverse are a
-   * different axis of meaning. Deliberately not the reflex red and green:
-   * these are muted enough to sit next to the teal without shouting, and
-   * they differ in lightness as well as hue. Colour is never the only
-   * encoding - the direction of the bar and the sign on the number both
-   * repeat it.
+  /* --- variance palette -----------------------------------------------------
+   * A different axis of meaning from the scenarios, so different hues.
+   * Muted enough to sit beside the teal, different in lightness as well as
+   * hue, and never the only encoding: bar direction and the sign repeat it.
    */
   --variance-favourable: #2e7d5b;
   --variance-adverse: #b4552d;
 
-  /* --- surfaces and text ---------------------------------------------- */
-  --page: #f3f6f8;
+  /* --- dimension palette ----------------------------------------------------
+   * For "one colour per channel" charts. Quiet, distinguishable, and none of
+   * them is a scenario colour, so a channel can never be mistaken for the
+   * budget line.
+   */
+  --dim-a: #1f6f7e;
+  --dim-b: #8a5a9c;
+  --dim-c: #6b8a2f;
+  --dim-d: #b4552d;
+  --dim-e: #4a5f8f;
+
+  /* --- surfaces and text ----------------------------------------------------- */
+  --band: #0a2e35;
+  --band-ink: #e7f0f1;
+  --band-ink-soft: #9fbcc1;
+  --band-line: rgba(231, 240, 241, 0.14);
+
+  --page: #f1f4f4;
   --surface: #ffffff;
   --raised: #ffffff;
-  --ink: #16202a;
-  --ink-soft: #5b6874;
-  --ink-faint: #8b97a3;
-  --line: #e2e7ec;
-  --line-strong: #cdd6de;
-  --open-period: rgba(11, 85, 99, 0.045);
-  --hover: rgba(11, 85, 99, 0.05);
+  --ink: #141c22;
+  --ink-soft: #4f5d68;
+  --ink-faint: #85929c;
+  --line: #dfe5e6;
+  --line-strong: #c4ced1;
+  --rule: #2b3a42;
+  --open-period: rgba(11, 85, 99, 0.05);
+  --hover: rgba(11, 85, 99, 0.06);
+  --estimate-bg: rgba(62, 151, 168, 0.06);
 
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(22, 32, 42, 0.06),
-    0 8px 24px rgba(22, 32, 42, 0.05);
+  --radius: 3px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
 
-    /* Lifted for contrast against a dark ground; the roles are unchanged. */
     --scenario-actual: #4bb8cc;
     --scenario-forecast: #2c7d8c;
     --scenario-budget: #e0a44a;
@@ -63,20 +84,35 @@
     --variance-favourable: #4fae82;
     --variance-adverse: #d97a4e;
 
-    --page: #0e1419;
-    --surface: #161e26;
-    --raised: #1b242d;
-    --ink: #e8edf2;
-    --ink-soft: #9aa8b5;
-    --ink-faint: #6f7d8a;
-    --line: #26313b;
-    --line-strong: #33404c;
-    --open-period: rgba(75, 184, 204, 0.06);
-    --hover: rgba(75, 184, 204, 0.08);
+    --dim-a: #4bb8cc;
+    --dim-b: #b48ac4;
+    --dim-c: #9db85a;
+    --dim-d: #d97a4e;
+    --dim-e: #8ea0d6;
 
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    --band: #061c21;
+    --band-ink: #e3eef0;
+    --band-ink-soft: #8fabb0;
+    --band-line: rgba(227, 238, 240, 0.12);
+
+    --page: #0c1317;
+    --surface: #121b20;
+    --raised: #172229;
+    --ink: #e5ebed;
+    --ink-soft: #9caab4;
+    --ink-faint: #6b7a85;
+    --line: #22303a;
+    --line-strong: #33434f;
+    --rule: #b9c6cc;
+    --open-period: rgba(75, 184, 204, 0.07);
+    --hover: rgba(75, 184, 204, 0.08);
+    --estimate-bg: rgba(44, 125, 140, 0.14);
   }
 }
+
+/* ============================================================================
+   Base
+   ============================================================================ */
 
 *,
 *::before,
@@ -84,89 +120,180 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--page);
   color: var(--ink);
-  font: 15px/1.55 "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
-    sans-serif;
+  font: 14px/1.5 var(--font-body);
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
 }
 
-button {
+button,
+select {
   font: inherit;
   color: inherit;
 }
 
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--scenario-forecast);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--scenario-actual);
+}
+
 .shell {
-  max-width: 1240px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left: 28px;
+  padding-right: 28px;
 }
 
-/* Tabular figures wherever digits are compared, so columns line up and a
-   changing value does not shift the text beside it. */
-.kpi-value,
-.kpi-delta,
-.pnl td,
-.period {
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
-/* --- header ------------------------------------------------------------ */
+/* ============================================================================
+   Band: brand, views, masthead
+   ============================================================================ */
 
-.page-header {
-  padding: 26px 0 20px;
+.band {
+  background: var(--band);
+  color: var(--band-ink);
 }
 
-.header-inner {
+.band-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
+  gap: 8px 24px;
+  align-items: center;
   justify-content: space-between;
+  padding-top: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--band-line);
 }
 
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 12px;
+.brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--band-ink-soft);
 }
 
-h1 {
-  margin: 0;
-  font-size: 25px;
-  font-weight: 650;
-  letter-spacing: -0.015em;
+.brand-mark {
+  width: 10px;
+  height: 10px;
+  background: var(--scenario-forecast);
+  border-radius: 1px;
+  transform: rotate(45deg);
 }
 
-.period {
-  margin: 0;
+.brand-sep {
+  opacity: 0.5;
+}
+
+.views {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.view-tab {
+  padding: 8px 14px 9px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-display);
   font-size: 15px;
-  font-weight: 600;
-  color: var(--ink-soft);
+  font-weight: 400;
+  color: var(--band-ink-soft);
+  cursor: pointer;
+  transition: color 120ms;
 }
 
-/* --- control bar -------------------------------------------------------- */
+.view-tab:hover {
+  color: var(--band-ink);
+}
+
+.view-tab[aria-pressed="true"] {
+  color: var(--band-ink);
+  font-weight: 600;
+  border-bottom-color: var(--scenario-forecast);
+}
+
+.masthead {
+  padding-top: 26px;
+  padding-bottom: 30px;
+}
+
+.masthead-sentence {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: clamp(26px, 3.4vw, 42px);
+  line-height: 1.12;
+  letter-spacing: -0.012em;
+  color: var(--band-ink-soft);
+  text-wrap: balance;
+}
+
+.masthead-sentence strong {
+  font-weight: 600;
+  color: var(--band-ink);
+}
+
+.masthead-unit {
+  font-size: 0.6em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--band-ink-soft);
+  white-space: nowrap;
+}
+
+.masthead-note {
+  margin: 14px 0 0;
+  max-width: 70ch;
+  padding-left: 12px;
+  border-left: 2px solid var(--scenario-budget);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--band-ink-soft);
+}
+
+/* ============================================================================
+   Control bar
+   ============================================================================ */
 
 .control-bar {
   z-index: 20;
   background: var(--surface);
-  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 1px 6px rgba(22, 32, 42, 0.04);
 }
 
-/*
- * Sticky only when the screen is tall enough to spare it. On a short
- * viewport the slicers wrap into three rows and pin roughly 300px to the top,
- * which on a 384px window leaves no dashboard underneath. Below the
- * threshold the bar simply scrolls away like any other content.
- */
-@media (min-height: 680px) {
+/* Sticky only where the screen can spare it: on a short viewport the bar
+   wraps into rows and would pin most of the window. */
+@media (min-height: 720px) {
   .control-bar {
     position: sticky;
     top: 0;
@@ -176,29 +303,32 @@ h1 {
 .slicer-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 22px;
+  gap: 10px 26px;
   align-items: flex-end;
-  padding: 12px 0 11px;
+  padding-top: 11px;
+  padding-bottom: 11px;
 }
 
 .slicer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .slicer-label {
   font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
+/* --- segmented ---------------------------------------------------------- */
+
 .segmented {
-  display: flex;
+  display: inline-flex;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -208,24 +338,130 @@ h1 {
   border: 0;
   border-right: 1px solid var(--line-strong);
   font-size: 13px;
+  line-height: 1.3;
   cursor: pointer;
+  transition: background 100ms;
 }
 
 .segment:last-child {
   border-right: 0;
 }
 
-.segment:hover {
+.segment:hover:not(:disabled) {
   background: var(--hover);
 }
 
+.segment:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
 .segment[aria-pressed="true"] {
-  background: var(--scenario-actual);
-  color: #fff;
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 500;
+}
+
+.segmented.is-small .segment {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+/* --- scenario chips -------------------------------------------------------- */
+
+.chips {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.chip {
+  position: relative;
+  padding: 5px 11px 5px 22px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 100ms, color 100ms;
+}
+
+.chip::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  border: 1.5px solid var(--chip-colour, var(--ink-faint));
+  background: transparent;
+}
+
+.chip.is-cy_actual { --chip-colour: var(--scenario-actual); }
+.chip.is-forecast  { --chip-colour: var(--scenario-forecast); }
+.chip.is-budget    { --chip-colour: var(--scenario-budget); }
+.chip.is-ly_actual { --chip-colour: var(--scenario-ly); }
+
+.chip:hover {
+  background: var(--hover);
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--chip-colour);
+}
+
+.chip[aria-pressed="true"]::before {
+  background: var(--chip-colour);
+}
+
+/* Dashed ring on the forecast chip, so the convention shows in the control. */
+.chip.is-forecast::before {
+  border-style: dashed;
+}
+
+.chip.is-primary {
   font-weight: 600;
 }
 
-/* --- multi-select picker ------------------------------------------------ */
+.chip.is-primary::after {
+  content: "reading";
+  margin-left: 7px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --- period ------------------------------------------------------------- */
+
+.period-control {
+  display: inline-flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.month-select {
+  padding: 4px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.month-select.is-active {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+/* --- pickers ------------------------------------------------------------ */
 
 .picker {
   position: relative;
@@ -233,11 +469,12 @@ h1 {
 
 .picker-summary {
   padding: 5px 11px;
-  min-width: 96px;
+  min-width: 108px;
   background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-size: 13px;
+  line-height: 1.3;
   cursor: pointer;
   list-style: none;
   user-select: none;
@@ -257,9 +494,14 @@ h1 {
 }
 
 .picker-summary.is-active {
-  border-color: var(--scenario-actual);
-  color: var(--scenario-actual);
-  font-weight: 600;
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.picker-summary.is-active::after {
+  color: var(--surface);
+  opacity: 0.7;
 }
 
 .picker-panel {
@@ -267,25 +509,23 @@ h1 {
   z-index: 30;
   top: calc(100% + 5px);
   left: 0;
-  /* Never wider than the screen it opens on: a fixed min-width pushed the
-     panel past the viewport edge on a phone and took the page with it. */
-  min-width: min(190px, calc(100vw - 40px));
+  min-width: min(200px, calc(100vw - 40px));
   max-width: calc(100vw - 28px);
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
-  padding: 7px;
+  padding: 6px;
   background: var(--raised);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(10, 30, 40, 0.14);
 }
 
 .picker-option {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   align-items: center;
-  padding: 5px 7px;
-  border-radius: 5px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
   font-size: 13.5px;
   cursor: pointer;
 }
@@ -294,10 +534,14 @@ h1 {
   background: var(--hover);
 }
 
+.picker-option input {
+  accent-color: var(--scenario-actual);
+}
+
 .picker-clear {
   width: 100%;
-  margin-top: 5px;
-  padding: 5px;
+  margin-top: 4px;
+  padding: 6px;
   background: transparent;
   border: 0;
   border-top: 1px solid var(--line);
@@ -306,29 +550,34 @@ h1 {
   cursor: pointer;
 }
 
-.slicer-reset {
-  padding: 5px 13px;
+.slicer-reset,
+.button-quiet {
+  padding: 5px 12px;
   background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
+  border-radius: var(--radius);
   font-size: 13px;
   color: var(--ink-soft);
   cursor: pointer;
 }
 
-.slicer-reset:hover {
+.slicer-reset:hover,
+.button-quiet:hover {
   background: var(--hover);
   color: var(--ink);
 }
 
-/* --- breadcrumb and reading line ---------------------------------------- */
+.slicer-reset {
+  align-self: flex-end;
+  margin-left: auto;
+}
 
-.context-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 18px;
-  align-items: baseline;
-  padding: 0 0 11px;
+/* ============================================================================
+   Trail
+   ============================================================================ */
+
+.trail-bar {
+  padding-top: 12px;
 }
 
 .trail {
@@ -336,14 +585,19 @@ h1 {
   flex-wrap: wrap;
   gap: 2px;
   align-items: center;
+  font-size: 13px;
+}
+
+.trail-lead {
+  margin-right: 6px;
+  color: var(--ink-faint);
 }
 
 .crumb {
   padding: 2px 7px;
   background: transparent;
   border: 0;
-  border-radius: 5px;
-  font-size: 13px;
+  border-radius: var(--radius);
   color: var(--scenario-actual);
   cursor: pointer;
 }
@@ -353,12 +607,11 @@ h1 {
 }
 
 .crumb:disabled {
-  color: var(--ink-soft);
   cursor: default;
 }
 
 .crumb.is-current {
-  font-weight: 650;
+  font-weight: 600;
   color: var(--ink);
 }
 
@@ -366,265 +619,328 @@ h1 {
   color: var(--ink-faint);
 }
 
-.reading {
-  margin: 0;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-
-.reading-note {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--ink-faint);
-}
-
-/* --- view switcher ------------------------------------------------------ */
-
-.views {
-  display: flex;
-  /* Wraps rather than pushing the page sideways: three tabs plus their
-     badges do not fit on a phone in one row. */
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 18px 0 0;
-}
-
-.view-tab {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  padding: 7px 15px;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  font-size: 14px;
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-
-.view-tab:hover {
-  color: var(--ink);
-}
-
-.view-tab[aria-pressed="true"] {
-  font-weight: 650;
-  color: var(--ink);
-  border-bottom-color: var(--scenario-actual);
-}
-
-.view-badge {
-  padding: 1px 6px;
-  background: var(--page);
-  border: 1px solid var(--line-strong);
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-/* --- KPI strip ---------------------------------------------------------- */
+/* ============================================================================
+   KPI band
+   ============================================================================ */
 
 .kpis {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
   margin-top: 22px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line);
 }
 
 .kpi {
-  padding: 13px 15px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 14px 16px 13px 0;
+  margin-right: 16px;
+  border-right: 1px solid var(--line);
+}
+
+.kpi:last-child {
+  border-right: 0;
+  margin-right: 0;
 }
 
 .kpi-label {
-  margin: 0 0 5px;
-  font-size: 11px;
+  margin: 0 0 6px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .kpi-value {
   margin: 0;
-  font-size: 22px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.05;
   letter-spacing: -0.02em;
+  font-feature-settings: "tnum" 1;
+}
+
+.kpi-unit {
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--ink-faint);
+  letter-spacing: 0;
 }
 
 .kpi-delta {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
+  min-height: 1.3em;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-faint);
 }
 
 .kpi.is-unavailable .kpi-value {
   color: var(--ink-faint);
-  font-weight: 500;
 }
 
-.is-favourable {
-  color: var(--variance-favourable);
-}
+.is-favourable { color: var(--variance-favourable); }
+.is-adverse    { color: var(--variance-adverse); }
+.is-flat       { color: var(--ink-faint); }
 
-.is-adverse {
-  color: var(--variance-adverse);
-}
+/* ============================================================================
+   Panels
+   ============================================================================ */
 
-.is-flat {
-  color: var(--ink-faint);
+.view {
+  padding-bottom: 8px;
 }
-
-/* --- cards -------------------------------------------------------------- */
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  gap: 20px;
 }
 
-.card {
-  margin-top: 18px;
-  padding: 20px 22px 18px;
+.panel {
+  margin-top: 20px;
+  padding: 18px 20px 16px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.grid-2 .card {
-  margin-top: 18px;
   min-width: 0;
 }
 
-.card-header h2 {
+.panel-head h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
-.card-header p {
-  margin: 5px 0 0;
-  max-width: 76ch;
+.panel-head p {
+  margin: 6px 0 0;
+  max-width: 74ch;
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--ink-soft);
 }
 
+.panel-head.has-control {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .chart-frame {
   position: relative;
-  height: 330px;
+  height: 320px;
   margin-top: 16px;
 }
 
-.chart-frame.is-short {
-  height: 250px;
-}
+.chart-frame.is-short { height: 250px; }
+.chart-frame.is-tall  { height: 380px; }
 
-.inline-key {
-  display: inline-block;
-  min-width: 15px;
-  padding: 0 3px;
-  background: var(--page);
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  font-size: 11px;
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
   text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-faint);
 }
 
-/* --- P&L table ---------------------------------------------------------- */
+.footnote {
+  margin: 14px 0 0;
+  max-width: 80ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+
+/* ============================================================================
+   Statement
+   ============================================================================ */
+
+.panel.is-statement {
+  padding-top: 16px;
+}
+
+.statement-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.statement-heading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.statement-unit {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.statement-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 
 .table-frame {
-  margin-top: 14px;
   overflow-x: auto;
 }
 
-.pnl {
+.statement {
   width: 100%;
   border-collapse: collapse;
   font-size: 13.5px;
+  font-feature-settings: "tnum" 1;
 }
 
-.pnl th,
-.pnl td {
+.statement th,
+.statement td {
   padding: 6px 10px;
-  text-align: left;
   white-space: nowrap;
+  text-align: right;
+  vertical-align: baseline;
 }
 
-.pnl thead th {
-  padding-bottom: 9px;
+.statement .col-line {
+  text-align: left;
+  width: 26%;
+  min-width: 220px;
+  font-weight: 400;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+
+.statement thead th {
+  padding-top: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--line-strong);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
-.pnl .num {
-  text-align: right;
+.statement thead th.is-total {
+  color: var(--ink);
 }
 
-.pnl .col-line {
-  width: 30%;
-  font-weight: 400;
+.statement td.is-total {
+  font-weight: 600;
+  border-left: 1px solid var(--line);
 }
 
-.pnl-row.is-strong {
-  font-weight: 650;
+.statement thead th.is-variance,
+.statement td.is-variance {
+  border-left: 1px solid var(--line);
 }
 
-.pnl-row.is-strong th,
-.pnl-row.is-strong td {
-  border-top: 1px solid var(--line);
+.statement td.is-variance + td.is-variance,
+.statement thead th.is-variance + th.is-variance {
+  border-left: 0;
 }
 
-.pnl-row.is-normal .col-line {
-  padding-left: 22px;
+.statement td.is-share,
+.statement thead th.is-share {
+  color: var(--ink-faint);
+  border-left: 1px solid var(--line);
+}
+
+/* Months read from the estimate: the same italics a pack would use. */
+.statement td.is-estimate {
+  font-style: italic;
   color: var(--ink-soft);
+  background: var(--estimate-bg);
 }
 
-.pnl-row.is-detail {
+.statement thead th.is-estimate {
+  font-style: italic;
+  background: var(--estimate-bg);
+}
+
+.srow.is-group .col-line {
+  font-weight: 500;
+}
+
+.srow.is-leaf {
   font-size: 12.5px;
   color: var(--ink-soft);
 }
 
-.pnl-row.is-detail .col-line {
-  padding-left: 46px;
+.srow.is-leaf .col-line {
+  padding-left: 40px;
   font-weight: 400;
 }
 
-.pnl-row.is-unavailable {
+.srow.is-subtotal {
+  font-weight: 600;
+}
+
+.srow.is-subtotal th,
+.srow.is-subtotal td {
+  border-top: 1px solid var(--rule);
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.srow.is-closing th,
+.srow.is-closing td {
+  border-bottom: 3px double var(--rule);
+}
+
+.srow.is-unavailable {
   color: var(--ink-faint);
 }
 
-.pnl-row:hover td,
-.pnl-row:hover th {
+.srow.is-unavailable td {
+  font-style: normal;
+}
+
+.srow:hover td,
+.srow:hover th {
   background: var(--hover);
 }
 
+.statement-legend {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 .disclose {
-  width: 17px;
-  height: 17px;
-  margin-right: 7px;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
   padding: 0;
-  background: var(--page);
+  background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 12px;
   line-height: 1;
   color: var(--ink-soft);
   cursor: pointer;
+  vertical-align: 1px;
 }
 
 .disclose:hover {
@@ -632,52 +948,13 @@ h1 {
   color: var(--scenario-actual);
 }
 
-/* --- roadmap views ------------------------------------------------------ */
-
-.roadmap {
-  margin-top: 22px;
-  padding: 26px 28px 28px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.roadmap h2 {
-  margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 650;
-}
-
-.roadmap p {
-  margin: 0 0 14px;
-  max-width: 74ch;
-  font-size: 13.5px;
-  color: var(--ink-soft);
-}
-
-.roadmap ul {
-  margin: 0;
-  padding-left: 20px;
-  max-width: 78ch;
-}
-
-.roadmap li {
-  margin-bottom: 9px;
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--ink-soft);
-}
-
-.roadmap strong {
-  color: var(--ink);
-}
-
-/* --- status and footer -------------------------------------------------- */
+/* ============================================================================
+   Status and footer
+   ============================================================================ */
 
 .status {
-  margin: 26px 0 0;
-  padding: 18px 20px;
+  margin: 24px 0 0;
+  padding: 16px 18px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -689,54 +966,97 @@ h1 {
   padding: 1px 5px;
   background: var(--page);
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 12.5px;
 }
 
 .page-footer {
-  margin: 34px 0 0;
-  padding: 18px 0 40px;
+  margin-top: 36px;
+  padding-top: 16px;
+  padding-bottom: 44px;
   border-top: 1px solid var(--line);
   font-size: 12.5px;
+  line-height: 1.55;
   color: var(--ink-faint);
 }
 
+.page-footer p {
+  margin: 0 0 6px;
+  max-width: 80ch;
+}
+
 .page-footer a {
-  margin-left: 8px;
   color: var(--ink-soft);
 }
 
-/* --- responsive --------------------------------------------------------- */
+/* ============================================================================
+   Responsive
+   ============================================================================ */
 
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   .kpis {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .kpi:nth-child(3) {
+    border-right: 0;
+  }
+  .kpi:nth-child(n + 4) {
+    border-top: 1px solid var(--line);
   }
   .grid-2 {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 680px) {
   .shell {
-    padding: 0 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .masthead {
+    padding-top: 20px;
+    padding-bottom: 22px;
+  }
+  .masthead-sentence {
+    max-width: none;
   }
   .kpis {
     grid-template-columns: repeat(2, 1fr);
   }
-  .chart-frame {
+  .kpi:nth-child(3) {
+    border-right: 1px solid var(--line);
+  }
+  .kpi:nth-child(2n) {
+    border-right: 0;
+  }
+  .kpi:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+  .kpi:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
+  .kpi-value {
+    font-size: 22px;
+  }
+  .chart-frame,
+  .chart-frame.is-tall {
     height: 280px;
   }
   .slicer-bar {
     gap: 10px 14px;
   }
-  h1 {
-    font-size: 21px;
-  }
-  .pnl .col-line {
-    width: auto;
+  .chip.is-primary::after {
+    display: none;
   }
   .view-tab {
-    padding: 7px 11px;
+    padding: 7px 10px 8px;
+    font-size: 14px;
+  }
+  .panel {
+    padding: 14px 14px 12px;
+  }
+  .statement .col-line {
+    min-width: 160px;
+    width: auto;
   }
 }

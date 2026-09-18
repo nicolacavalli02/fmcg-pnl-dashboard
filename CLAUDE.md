@@ -51,9 +51,12 @@ categoria a volume e valore, listino per collo.
 - `/data` — script di generazione dati (Python) e dataset generato (JSON/CSV)
 - `/js/logic` — calcoli derivati dai dati grezzi (variance %, margini,
   valori per waterfall/bridge)
-- `/js/charts` — un modulo per grafico
-- `/js/ui` — componenti DOM che non sono grafici Chart.js (slicer, briciole,
-  tile KPI, tabella P&L, formattazione)
+- `/js/charts` — un modulo per grafico, più due condivisi: `theme.js`
+  (palette letta dal CSS, tooltip, assi, plugin etichette, ciclo di vita) e
+  `waterfall.js` (il rendering comune a tutti i bridge)
+- `/js/ui` — componenti DOM che non sono grafici Chart.js: `slicers`,
+  `masthead` (la frase-testata), `breadcrumb`, `kpi-strip`, `pnl-statement`
+  (il P&L come prospetto), `format`
 - `/js/state.js` — stato unico del dashboard, sincronizzato con l'hash URL
 - `/js/app.js` — controller di pagina
 - `/css` — stili
@@ -93,6 +96,32 @@ categoria a volume e valore, listino per collo.
   tratteggiato**, così resta provvisorio anche in bianco e nero; il Budget è
   l'unico tono caldo, così piano e consuntivo non si confondono mai; l'anno
   scorso è grigio neutro, contesto e mai soggetto.
+
+## Sistema visivo
+Il modello è il *management reporting pack*: un blocco d'intestazione che
+dichiara entità, periodo, base e valuta, poi tabelle a righe sottili di cifre
+tabulari. Da qui le scelte:
+- **Fascia superiore** in teal-inchiostro (`--band`) con brand, viste e la
+  frase-testata. Sotto, tutto piatto e a filetto: niente ombre, raggio 3px.
+- **Tipografia**: *Bricolage Grotesque* (display, peso 300 nella testata e
+  600 nei titoli) e *IBM Plex Sans* per tutto il resto, con `tnum` attivo
+  ovunque compaiano cifre. Caricate da Google Fonts in `index.html`; è l'unica
+  dipendenza esterna oltre a Chart.js, e come Chart.js non richiede build.
+- **Palette dimensioni** (`--dim-a…e`) per i grafici "un colore per canale":
+  nessuna coincide con un colore scenario, così un canale non si confonde mai
+  con la linea del budget.
+- **Prospetto P&L in convenzione contabile** (`pnl-statement.js`,
+  `ledger()` in `format.js`): unità dichiarata una volta nell'intestazione,
+  negativi fra parentesi, zero come trattino, riga singola sopra ogni
+  subtotale, doppia sotto l'EBIT. Nella vista per mese i mesi aperti sono in
+  corsivo su fondo tenue e letti dal forecast; YTD e anno intero sono colonne
+  proprie.
+- **Stato vuoto, non grafico vuoto**: quando un grafico non ha senso (nessun
+  confronto, grana sbagliata) il pannello lo dice con una frase, tramite
+  `emptyState()` in `theme.js`, invece di disegnare assi senza dati.
+- Le tre estetiche "default AI" — crema con serif ad alto contrasto e
+  terracotta, nero con accento acido, broadsheet a filetti e raggio zero —
+  sono state evitate di proposito.
 
 ## Comandi
 ```bash
@@ -150,8 +179,17 @@ disegna nulla (sta in `/js/charts`).
 - Tutto lo stato sta in `js/state.js`: nessun componente possiede un filtro
   proprio, per questo un cambio di slicer raggiunge la pagina intera.
   Serializzato nell'hash URL, quindi una vista filtrata è condivisibile.
-- Un solo controllo **Confronto** pilota scenario e riferimento ovunque, così
-  nessun grafico può confrontare qualcosa di diverso da ciò che dice l'header.
+- **Due controlli per gli scenari, non tre.** *Scenari* = quali stanno a
+  schermo (chip); *Confronto* = Off oppure uno di quelli. Lo scenario **letto**
+  — quello di KPI, bridge e varianze — non si sceglie: segue la precedenza
+  fissa Actual → Forecast → Budget → LY, che è come chiunque legge un pack (se
+  ci sono gli actual leggi quelli). Copre ogni coppia sensata e esclude quelle
+  insensate senza un terzo selettore. Il chip dello scenario letto porta la
+  dicitura "reading".
+- La **frase-testata** (`masthead.js`) è generata dallo stato e dice in parole
+  cosa mostra la pagina: scenario letto, confronto, periodo, ambito, unità.
+  Nessuno screenshot può essere ambiguo, e una discordanza fra frase e
+  grafico è un bug leggibile.
 - **Regola del periodo onesto**: chiedere l'anno intero su una base actual
   fa passare il lato actual al Forecast, e la UI lo dichiara. Gli actual si
   fermano alla chiusura; YTD actual + LE è la lettura annuale corretta.

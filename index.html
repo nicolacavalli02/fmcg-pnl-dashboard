@@ -10,160 +10,187 @@
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b5563'/%3E%3Cpath d='M3 11.5 6 7l3 2.2L13 4' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='2' fill='%230a2e35'/%3E%3Cpath d='M3 11.5 6 7l3 2.2L13 4' stroke='%234bb8cc' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
   <body>
-    <header class="page-header">
-      <div class="shell header-inner">
-        <div>
-          <p class="eyebrow">FMCG Group &middot; Italy</p>
-          <h1>Profit &amp; Loss Dashboard</h1>
-        </div>
-        <p class="period" id="period-label">&mdash;</p>
+    <header class="band">
+      <div class="shell band-row">
+        <p class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          FMCG Group <span class="brand-sep">·</span> Italy
+        </p>
+        <nav class="views" id="views" aria-label="Views"></nav>
+      </div>
+      <div class="shell masthead" id="masthead">
+        <h1 class="masthead-sentence" data-masthead-sentence>Loading the pack&hellip;</h1>
+        <p class="masthead-note" data-masthead-note hidden></p>
       </div>
     </header>
 
     <div class="control-bar">
-      <div class="shell">
-        <div class="slicer-bar" id="slicers"></div>
-        <div class="context-bar" id="breadcrumb"></div>
-      </div>
+      <div class="shell slicer-bar" id="slicers"></div>
     </div>
 
-    <div class="shell">
-      <nav class="views" id="views" aria-label="Dashboard views"></nav>
+    <div class="shell trail-bar" id="breadcrumb" hidden></div>
 
-      <main>
-        <p class="status" id="status">Loading the dataset&hellip;</p>
+    <main class="shell">
+      <p class="status" id="status">Loading the dataset&hellip;</p>
 
-        <section id="view-performance" hidden>
-          <div class="kpis" id="kpis"></div>
+      <div class="kpis" id="kpis" hidden></div>
 
-          <div class="grid-2">
-            <section class="card">
-              <div class="card-header">
-                <h2>Net revenue phasing</h2>
-                <p>
-                  The shape of the year across all four scenarios. The shaded
-                  months are still open: the actual line stops at the close and
-                  only the forecast continues to December. Dimensional filters
-                  apply here, but the period slicer does not &mdash; a phasing
-                  chart cut to eight months is no longer a phasing chart.
-                </p>
-              </div>
-              <div class="chart-frame">
-                <canvas
-                  id="chart-phasing"
-                  role="img"
-                  aria-label="Monthly net revenue for actual, budget, prior year and forecast"
-                ></canvas>
-              </div>
-            </section>
-
-            <section class="card">
-              <div class="card-header">
-                <h2 id="title-bridge">Why the result moved</h2>
-                <p id="caption-bridge"></p>
-              </div>
-              <div class="chart-frame">
-                <canvas
-                  id="chart-bridge"
-                  role="img"
-                  aria-label="Waterfall of the movement between the two scenarios"
-                ></canvas>
-              </div>
-            </section>
-          </div>
-
-          <section class="card">
-            <div class="card-header">
-              <h2 id="title-drivers">Who is driving the gap</h2>
-              <p id="caption-drivers"></p>
-            </div>
-            <div class="chart-frame is-short">
-              <canvas
-                id="chart-drivers"
-                role="img"
-                aria-label="Net revenue variance by dimension, ranked"
-              ></canvas>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <h2>The P&amp;L</h2>
+      <!-- ============================ PERFORMANCE ============================ -->
+      <section id="view-performance" class="view" hidden>
+        <div class="grid-2">
+          <section class="panel">
+            <header class="panel-head">
+              <h2>Net revenue phasing</h2>
               <p>
-                The full ladder against the selected comparison. Rows with a
-                <span class="inline-key">+</span> open into the lines that make
-                them up. Nothing below net revenue is stored in the dataset:
-                every subtotal is derived from the structure the data carries.
+                The shape of the year for the scenarios on screen. The shaded
+                months are still open: the actual line stops at the close and only
+                the forecast continues to December. Filters apply; the period
+                control does not, because a phasing chart cut to eight months is
+                no longer a phasing chart.
               </p>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-phasing" role="img" aria-label="Monthly net revenue by scenario"></canvas>
             </div>
-            <div class="table-frame" id="pnl-table"></div>
           </section>
-        </section>
 
-        <section id="view-commercial" class="roadmap" hidden>
-          <h2>Commercial</h2>
-          <p>
-            The gross-to-net story, on the same slicers and the same drill
-            path. Four analyses go here:
-          </p>
-          <ul>
-            <li>
-              <strong>Gross-to-net waterfall</strong> &mdash; where the list
-              price goes before it reaches the top line, split into on-invoice
-              discounts, promotional and other trade spend, and returns.
-            </li>
-            <li>
-              <strong>Price, volume and mix bridge</strong> &mdash; how much of
-              the revenue movement is more cases, a different blend of them, a
-              different list price, and a different discount.
-            </li>
-            <li>
-              <strong>Realisation per case</strong> &mdash; list against gross
-              against net price by channel, which is the gross-to-net ratio
-              expressed in a unit a commercial team can argue about.
-            </li>
-            <li>
-              <strong>Promotional return</strong> &mdash; pressure against ROI,
-              sized by spend. Below 1.0 a promotion gives away more margin than
-              it earns back, and in this dataset that ranges from 0.27 in Dairy
-              to 0.82 in Personal Care.
-            </li>
-          </ul>
-        </section>
+          <section class="panel">
+            <header class="panel-head">
+              <h2 id="title-bridge">Why the result moved</h2>
+              <p id="caption-bridge"></p>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-bridge" role="img" aria-label="Bridge from the comparison scenario to the one being read"></canvas>
+            </div>
+          </section>
+        </div>
 
-        <section id="view-portfolio" class="roadmap" hidden>
-          <h2>Portfolio</h2>
-          <p>Who and what, rather than how much. Two analyses go here:</p>
-          <ul>
-            <li>
-              <strong>Contribution map</strong> &mdash; every customer plotted
-              by size against contribution margin, which is where the Discount
-              channel stops looking like growth.
-            </li>
-            <li>
-              <strong>Market share</strong> &mdash; ours against the category
-              market, actual against plan. It is the only view that separates a
-              soft market from lost competitiveness.
-            </li>
-          </ul>
+        <section class="panel">
+          <header class="panel-head">
+            <h2 id="title-drivers">Who is driving the gap</h2>
+            <p id="caption-drivers"></p>
+          </header>
+          <div class="chart-frame is-short">
+            <canvas id="chart-drivers" role="img" aria-label="Net revenue variance by dimension, ranked"></canvas>
+          </div>
         </section>
-      </main>
+      </section>
 
-      <footer class="page-footer">
+      <!-- ================================ P&L ================================= -->
+      <section id="view-pnl" class="view" hidden>
+        <section class="panel is-statement" id="pnl-statement"></section>
+        <p class="footnote">
+          Nothing below net revenue is stored in the dataset: every subtotal is
+          derived from the structure the data carries, the same way the charts
+          derive theirs, so the statement and the dashboard cannot disagree.
+        </p>
+      </section>
+
+      <!-- ============================= COMMERCIAL ============================= -->
+      <section id="view-commercial" class="view" hidden>
+        <div class="grid-2">
+          <section class="panel">
+            <header class="panel-head">
+              <h2>Gross to net</h2>
+              <p id="caption-g2n"></p>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-g2n" role="img" aria-label="Waterfall from gross sales to net revenue"></canvas>
+            </div>
+          </section>
+
+          <section class="panel">
+            <header class="panel-head has-control">
+              <div>
+                <h2>Price, volume and mix</h2>
+                <p id="caption-pvm"></p>
+              </div>
+              <div class="segmented is-small" id="pvm-segment" role="group" aria-label="Mix segment"></div>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-pvm" role="img" aria-label="Revenue bridge split into volume, mix, list price and discount effects"></canvas>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-2">
+          <section class="panel">
+            <header class="panel-head">
+              <h2>What a case is worth, by channel</h2>
+              <p>
+                List price, what was invoiced, what was kept. The first gap is the
+                channel's price positioning, the second is the discount it
+                negotiates &mdash; and the two channels that look furthest apart
+                end up closest at the net line.
+              </p>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-realisation" role="img" aria-label="List, gross and net price per case by channel"></canvas>
+            </div>
+          </section>
+
+          <section class="panel">
+            <header class="panel-head">
+              <h2>Do the promotions pay back?</h2>
+              <p id="caption-promo"></p>
+            </header>
+            <div class="chart-frame">
+              <canvas id="chart-promo" role="img" aria-label="Promotional pressure against promotional return by category"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============================== PORTFOLIO ============================== -->
+      <section id="view-portfolio" class="view" hidden>
+        <div class="grid-2">
+          <section class="panel">
+            <header class="panel-head">
+              <h2>Who contributes</h2>
+              <p id="caption-contribution"></p>
+            </header>
+            <div class="chart-frame is-tall">
+              <canvas id="chart-contribution" role="img" aria-label="Customers by net revenue and contribution margin"></canvas>
+            </div>
+          </section>
+
+          <section class="panel">
+            <header class="panel-head">
+              <h2>Us or the market</h2>
+              <p id="caption-share"></p>
+            </header>
+            <div class="chart-frame is-tall">
+              <canvas id="chart-share" role="img" aria-label="Volume market share by category, scenario against comparison"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell page-footer">
+      <p>
         Synthetic dataset. No real or sensitive data: the figures are generated
-        from FMCG benchmark ratios and the company, its customers and its
+        from FMCG benchmark ratios, and the company, its customers and its
         results are fictional.
-        <a href="https://github.com/nicolacavalli02/fmcg-pnl-dashboard"
-          >Source on GitHub</a
-        >
-      </footer>
-    </div>
+      </p>
+      <p>
+        <a href="https://github.com/nicolacavalli02/fmcg-pnl-dashboard">Source on GitHub</a>
+        <span class="brand-sep">·</span>
+        <a href="docs/dataset-walkthrough.xlsx">Dataset walkthrough (Excel)</a>
+      </p>
+    </footer>
 
     <script type="module" src="js/app.js"></script>
   </body>

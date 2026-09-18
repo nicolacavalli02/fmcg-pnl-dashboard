@@ -113,18 +113,45 @@ generator rather than to noise:
   Below 1.0 a promotion gives away more margin than it earns back, so there
   is a real case to argue about where to stop investing.
 
+## What the page does
+
+Four views on one set of controls. **Performance** is the dashboard: the
+year's phasing, a bridge explaining why the result moved, and a ranked
+breakdown of who is driving the gap that drills down on click. **P&L** is the
+statement itself, by scenario or by month, in ledger convention, with a CSV
+download. **Commercial** takes the top line apart: gross to net, price against
+volume against mix, what a case is worth by channel, and whether the
+promotions pay back. **Portfolio** places every customer by size and margin,
+and reads market share by category.
+
+The controls at the top are two, not three. *Scenarios* picks which of the
+four are on screen; *Compare with* picks what they are measured against, or
+turns comparison off. The scenario being read follows a fixed precedence —
+actual, then forecast, then budget, then last year — because that is how a
+pack is read: if the actuals are on the page, you read the actuals. Every
+view answers to the same choice, and the sentence at the top of the page says
+what it is in words, so no screenshot is ambiguous.
+
+Ask for the full year while the actuals are on screen and the page reads the
+Latest Estimate instead, and tells you. Drill into a customer and EBITDA
+becomes `n/a`, not a number: overhead is not held at that grain, and a metric
+that cannot be answered says so rather than quietly reporting contribution
+margin under another name.
+
 ## How it is built
 
 ```
-data/     generator (Python, standard library only) and the dataset it emits
-js/logic/ every derived calculation — no DOM, no Chart.js, importable in Node
-js/charts/ one module per chart, reading only from js/logic
-js/app.js page controller: loads once, fills the DOM, calls the charts
-css/      styling, and the single definition of the scenario palette
+data/       generator (Python, standard library only) and the dataset it emits
+js/logic/   every derived calculation — no DOM, no Chart.js, importable in Node
+js/state.js one state object, serialised into the URL hash
+js/ui/      slicers, masthead, breadcrumb, KPI band, the P&L statement
+js/charts/  one module per chart, reading only from js/logic
+js/app.js   page controller: loads once, hands every component one context
+css/        styling, and the single definition of every colour on the page
 ```
 
 The layering is the point. `js/logic` knows nothing about the page and is
-covered by 106 self-checks that cross-reference the JavaScript results
+covered by 139 self-checks that cross-reference the JavaScript results
 against the Python generator's own report, so a change to either side that
 breaks agreement fails loudly:
 

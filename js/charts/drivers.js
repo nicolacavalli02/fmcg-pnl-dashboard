@@ -12,126 +12,76 @@
  */
 
 import { varianceBy } from "../logic/index.js";
-import { cssVar, money } from "../ui/format.js";
-
-const MILLION = 1e6;
-
-const DIMENSION_LABEL = {
-  channel: "channel",
-  customer: "customer",
-  category: "category",
-};
+import { money } from "../ui/format.js";
+import { axisX, axisY, barLabels, baseOptions, chartModule, emptyState, MILLION, tooltip } from "./theme.js";
 
 export function createDrivers(dataset, canvas, state) {
-  let chart = null;
+  return chartModule(canvas, (ctx, c) => {
+    const dimension = ctx.drillDimension;
+    if (!ctx.compare) {
+      emptyState(canvas, "Turn on a comparison to rank who is driving the gap.");
+      return { dimension: null, rows: [], reason: "no-compare" };
+    }
+    if (!dimension) {
+      emptyState(canvas, "Every level is already filtered. Step back up in the trail to break the gap down again.");
+      return { dimension: null, rows: [], reason: "exhausted" };
+    }
+    emptyState(canvas, null);
 
-  return {
-    render(ctx) {
-      if (chart) {
-        chart.destroy();
-        chart = null;
-      }
-      const dimension = ctx.drillDimension;
-      if (!dimension) return { dimension: null, rows: [] };
+    const rows = varianceBy(dataset, ctx.filters, {
+      against: ctx.compare,
+      rowId: "net_revenue",
+      dimension,
+    }).filter((row) => row.available);
 
-      const rows = varianceBy(dataset, ctx.filters, {
-        against: ctx.basis.against,
-        rowId: "net_revenue",
-        dimension,
-      }).filter((row) => row.available);
-
-      const favourable = cssVar("--variance-favourable");
-      const adverse = cssVar("--variance-adverse");
-      const inkSoft = cssVar("--ink-soft");
-      const line = cssVar("--line");
-      const surface = cssVar("--surface");
-      const ink = cssVar("--ink");
-
-      chart = new Chart(canvas.getContext("2d"), {
-        type: "bar",
-        data: {
-          labels: rows.map((r) => r.label),
-          datasets: [
-            {
-              data: rows.map((r) => r.delta / MILLION),
-              backgroundColor: rows.map((r) =>
-                r.favourable ? favourable : adverse
-              ),
-              borderWidth: 0,
-              borderRadius: 2,
-              barPercentage: 0.7,
-            },
-          ],
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: rows.map((r) => r.label),
+        datasets: [
+          {
+            data: rows.map((r) => r.delta / MILLION),
+            backgroundColor: rows.map((r) => (r.favourable ? c.favourable : c.adverse)),
+            borderWidth: 0,
+            borderRadius: 1,
+            barPercentage: 0.68,
+            categoryPercentage: 0.8,
+          },
+        ],
+      },
+      options: {
+        ...baseOptions(),
+        indexAxis: "y",
+        layout: { padding: { right: 56, left: 4 } },
+        onClick: (_event, elements) => {
+          if (!elements.length) return;
+          const row = rows[elements[0].index];
+          state.drillInto(dimension, row.key, row.label);
         },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          // Charts are rebuilt on every state change, so the default one
-          // second entrance would replay in full on every slicer click. Short
-          // enough to acknowledge the change, not long enough to be noise.
-          animation: { duration: 260 },
-          onClick: (_event, elements) => {
-            if (!elements.length) return;
-            const row = rows[elements[0].index];
-            state.drillInto(dimension, row.key, row.label);
-          },
-          onHover: (event, elements) => {
-            // Chart.js replays the last hover after an update, and that
-            // synthetic event carries no native one to read a target from.
-            const target = event.native?.target;
-            if (!target) return;
-            target.style.cursor = elements.length ? "pointer" : "default";
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: surface,
-              titleColor: ink,
-              bodyColor: ink,
-              borderColor: line,
-              borderWidth: 1,
-              padding: 11,
-              displayColors: false,
-              callbacks: {
-                label: (item) => {
-                  const row = rows[item.dataIndex];
-                  const pct =
-                    row.deltaPct === null
-                      ? ""
-                      : `  ·  ${(row.deltaPct * 100).toFixed(1)}%`;
-                  return `${money(row.delta, { signed: true })}${pct}  ·  click to drill in`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              // Zero baseline, non negotiable: these bars are magnitudes of a
-              // difference and length is the whole comparison.
-              beginAtZero: true,
-              grid: { color: line, drawTicks: false },
-              border: { display: false },
-              ticks: {
-                color: inkSoft,
-                font: { size: 11 },
-                callback: (v) => `${v}m`,
-              },
-            },
-            y: {
-              grid: { display: false },
-              border: { color: line },
-              ticks: { color: inkSoft, font: { size: 12 } },
-            },
-          },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length ? "pointer" : "default";
         },
-      });
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltip(c, {
+            callbacks: {
+              label: (item) => {
+                const row = rows[item.dataIndex];
+                const pct = row.deltaPct === null ? "" : `  ·  ${(row.deltaPct * 100).toFixed(1)}%`;
+                return `${money(row.delta, { signed: true })}${pct}`;
+              },
+              footer: () => "Click to drill in",
+            },
+          }),
+        },
+        scales: {
+          x: axisY(c, { beginAtZero: true, ticks: { color: c.inkSoft, font: { size: 11 }, callback: (v) => `${v}m` } }),
+          y: axisX(c, { ticks: { color: c.ink, font: { size: 12 } } }),
+        },
+      },
+      plugins: [barLabels(c, (i) => money(rows[i].delta, { signed: true }))],
+    });
 
-      return { dimension, dimensionLabel: DIMENSION_LABEL[dimension], rows };
-    },
-    destroy() {
-      if (chart) chart.destroy();
-      chart = null;
-    },
-  };
+    return { chart, dimension, rows };
+  });
 }

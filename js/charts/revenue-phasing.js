@@ -1,5 +1,5 @@
 /**
- * Net revenue phasing: the four scenarios month by month.
+ * Net revenue phasing: the scenarios on screen, month by month.
  *
  * Three conventions are enforced here rather than left to the data.
  *
@@ -19,40 +19,18 @@
  */
 
 import { monthlySeries } from "../logic/index.js";
-import { cssVar } from "../ui/format.js";
+import { SCENARIO_SHORT } from "../state.js";
+import { axisX, axisY, baseOptions, chartModule, MILLION, tooltip } from "./theme.js";
 
-const MILLION = 1e6;
-
-function palette() {
-  return {
-    actual: cssVar("--scenario-actual"),
-    forecast: cssVar("--scenario-forecast"),
-    budget: cssVar("--scenario-budget"),
-    ly: cssVar("--scenario-ly"),
-    ink: cssVar("--ink"),
-    inkSoft: cssVar("--ink-soft"),
-    line: cssVar("--line"),
-    surface: cssVar("--surface"),
-    openPeriod: cssVar("--open-period"),
-  };
-}
-
-const money = new Intl.NumberFormat("en-GB", {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
+const one = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const signed = new Intl.NumberFormat("en-GB", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
   signDisplay: "exceptZero",
 });
 
-/**
- * Shade the months that are not yet closed and mark the boundary.
- * Written inline rather than pulling in the annotation plugin: one vertical
- * rule and one filled rectangle do not justify another dependency.
- */
-function openPeriodPlugin(lastClosedMonth, colours) {
+/** Shade the months that are not yet closed and mark the boundary. */
+function openPeriodPlugin(lastClosedMonth, c) {
   return {
     id: "openPeriod",
     beforeDatasetsDraw(chart) {
@@ -60,14 +38,9 @@ function openPeriodPlugin(lastClosedMonth, colours) {
       if (!chartArea) return;
       const boundary = scales.x.getPixelForValue(lastClosedMonth - 1);
       ctx.save();
-      ctx.fillStyle = colours.openPeriod;
-      ctx.fillRect(
-        boundary,
-        chartArea.top,
-        chartArea.right - boundary,
-        chartArea.bottom - chartArea.top
-      );
-      ctx.strokeStyle = colours.line;
+      ctx.fillStyle = c.openPeriod;
+      ctx.fillRect(boundary, chartArea.top, chartArea.right - boundary, chartArea.bottom - chartArea.top);
+      ctx.strokeStyle = c.lineStrong;
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -79,175 +52,117 @@ function openPeriodPlugin(lastClosedMonth, colours) {
   };
 }
 
+const STYLE = {
+  ly_actual: { width: 1.5, dash: [], order: 4 },
+  budget: { width: 2, dash: [], order: 3 },
+  forecast: { width: 2.5, dash: [6, 4], order: 2 },
+  cy_actual: { width: 3, dash: [], order: 1 },
+};
+
 export function createRevenuePhasing(dataset, canvas) {
-  let chart = null;
+  return chartModule(canvas, (ctx, c) => {
+    const closed = dataset.lastClosedMonth;
+    const labels = dataset.meta.months.map((m) => m.short);
 
-  return {
-    render(ctx) {
-      if (chart) {
-        chart.destroy();
-        chart = null;
-      }
-      const colours = palette();
-      const closed = dataset.lastClosedMonth;
-      const labels = dataset.meta.months.map((m) => m.short);
-
-      // Dimensional filters apply; the month filter deliberately does not.
-      const { months, scenario, ...dimensional } = ctx.filters;
-      const seriesFor = (id) =>
-        monthlySeries(dataset, { ...dimensional, scenario: id }, "net_revenue")
-          .map((point) => point.value / MILLION);
-
-      const ly = seriesFor("ly_actual");
-      const budget = seriesFor("budget");
-      const actualFull = seriesFor("cy_actual");
-      const forecastFull = seriesFor("forecast");
-
-      const actual = actualFull.map((v, i) => (i + 1 <= closed ? v : null));
-      const forecast = forecastFull.map((v, i) => (i + 1 >= closed ? v : null));
-
-      // Floor the axis below the lowest point by a third of the observed
-      // range, derived from the data so the framing never has to be re-tuned.
-      const observed = [...ly, ...budget, ...actualFull, ...forecastFull];
-      const lowest = Math.min(...observed);
-      const highest = Math.max(...observed);
-      const axisFloor = Math.max(
-        0,
-        Math.floor(lowest - (highest - lowest) * 0.35)
+    // Dimensional filters apply; the month filter deliberately does not.
+    const { months, scenario, ...dimensional } = ctx.filters;
+    const seriesFor = (id) =>
+      monthlySeries(dataset, { ...dimensional, scenario: id }, "net_revenue").map(
+        (point) => point.value / MILLION
       );
 
-      // Whatever the comparison slicer is set to is the line every tooltip
-      // measures against, so the chart and the header never disagree.
-      const referenceId = ctx.basis.against;
-      const reference = { budget, ly_actual: ly }[referenceId] ?? budget;
-      const referenceLabel = dataset.scenario(referenceId).label;
+    // The reader asked for these; the actual and the forecast share a line
+    // in practice, so if only one of the two is on screen the other's half
+    // of the year is still drawn, dashed, so the year is never cut in half.
+    const wanted = new Set(ctx.state.scenarios);
+    const drawActual = wanted.has("cy_actual") || wanted.has("forecast");
+    const drawForecast = wanted.has("forecast") || wanted.has("cy_actual");
 
-      const base = {
+    const full = {
+      ly_actual: seriesFor("ly_actual"),
+      budget: seriesFor("budget"),
+      cy_actual: seriesFor("cy_actual"),
+      forecast: seriesFor("forecast"),
+    };
+    const shownSeries = {
+      ly_actual: wanted.has("ly_actual") ? full.ly_actual : null,
+      budget: wanted.has("budget") ? full.budget : null,
+      cy_actual: drawActual ? full.cy_actual.map((v, i) => (i + 1 <= closed ? v : null)) : null,
+      forecast: drawForecast ? full.forecast.map((v, i) => (i + 1 >= closed ? v : null)) : null,
+    };
+
+    const observed = Object.values(shownSeries).flat().filter((v) => v !== null);
+    const lowest = Math.min(...observed);
+    const highest = Math.max(...observed);
+    const axisFloor = Math.max(0, Math.floor(lowest - (highest - lowest) * 0.35));
+
+    // Whatever the comparison control says is the line every tooltip
+    // measures against, so the chart and the masthead never disagree.
+    const reference = ctx.compare ? full[ctx.compare] : null;
+
+    const datasets = Object.entries(shownSeries)
+      .filter(([, data]) => data)
+      .map(([id, data]) => ({
+        id,
+        label: dataset.scenario(id).label,
+        data,
+        borderColor: c.scenario[id],
+        backgroundColor: c.scenario[id],
+        borderWidth: STYLE[id].width,
+        borderDash: STYLE[id].dash,
+        order: STYLE[id].order,
         tension: 0,
         pointRadius: 0,
         pointHoverRadius: 4,
         pointHitRadius: 14,
         spanGaps: false,
-      };
+      }));
 
-      chart = new Chart(canvas.getContext("2d"), {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              ...base,
-              label: dataset.scenario("ly_actual").label,
-              data: ly,
-              borderColor: colours.ly,
-              backgroundColor: colours.ly,
-              borderWidth: 1.5,
-              order: 4,
-            },
-            {
-              ...base,
-              label: dataset.scenario("budget").label,
-              data: budget,
-              borderColor: colours.budget,
-              backgroundColor: colours.budget,
-              borderWidth: 2,
-              order: 3,
-            },
-            {
-              ...base,
-              label: dataset.scenario("forecast").label,
-              data: forecast,
-              borderColor: colours.forecast,
-              backgroundColor: colours.forecast,
-              borderWidth: 2.5,
-              borderDash: [6, 4],
-              order: 2,
-            },
-            {
-              ...base,
-              label: dataset.scenario("cy_actual").label,
-              data: actual,
-              borderColor: colours.actual,
-              backgroundColor: colours.actual,
-              borderWidth: 3,
-              order: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          // Charts are rebuilt on every state change, so the default one
-          // second entrance would replay in full on every slicer click. Short
-          // enough to acknowledge the change, not long enough to be noise.
-          animation: { duration: 260 },
-          interaction: { mode: "index", intersect: false },
-          layout: { padding: { top: 8, right: 4 } },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: colours.surface,
-              titleColor: colours.ink,
-              bodyColor: colours.ink,
-              borderColor: colours.line,
-              borderWidth: 1,
-              padding: 12,
-              boxPadding: 5,
-              usePointStyle: true,
-              callbacks: {
-                title: (items) =>
-                  `${dataset.meta.months[items[0].dataIndex].label} ${
-                    items[0].dataIndex + 1 <= closed ? "· closed" : "· open"
-                  }`,
-                label: (item) => {
-                  const value = `${money.format(item.parsed.y)}m`;
-                  const against = reference[item.dataIndex];
-                  if (item.dataset.label === referenceLabel || !against) {
-                    return `  ${item.dataset.label}   ${value}`;
-                  }
-                  const gap = (item.parsed.y / against - 1) * 100;
-                  return `  ${item.dataset.label}   ${value}   ${signed.format(
-                    gap
-                  )}% vs ${referenceId === "budget" ? "plan" : "LY"}`;
-                },
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        ...baseOptions(),
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 8, right: 4 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltip(c, {
+            displayColors: true,
+            usePointStyle: true,
+            callbacks: {
+              title: (items) =>
+                `${dataset.meta.months[items[0].dataIndex].label} · ${
+                  items[0].dataIndex + 1 <= closed ? "closed" : "open"
+                }`,
+              label: (item) => {
+                const value = `${one.format(item.parsed.y)}m`;
+                const against = reference?.[item.dataIndex];
+                if (!against || item.dataset.id === ctx.compare) {
+                  return `  ${item.dataset.label}   ${value}`;
+                }
+                const gap = (item.parsed.y / against - 1) * 100;
+                return `  ${item.dataset.label}   ${value}   ${signed.format(gap)}% vs ${
+                  SCENARIO_SHORT[ctx.compare]
+                }`;
               },
             },
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              border: { color: colours.line },
-              ticks: { color: colours.inkSoft, font: { size: 12 } },
-            },
-            y: {
-              // The axis is cut, not zero based. On a bar chart that would be
-              // indefensible, because length encodes the value. On a time
-              // series line the reader is following movement, and the four
-              // scenarios sit within three per cent of each other: a zero
-              // baseline would squeeze them into an unreadable band and leave
-              // three quarters of the panel empty. The floor is labelled and
-              // derived from the data rather than picked to flatter it.
-              beginAtZero: false,
-              min: axisFloor,
-              grid: { color: colours.line, drawTicks: false },
-              border: { display: false },
-              ticks: {
-                color: colours.inkSoft,
-                font: { size: 12 },
-                padding: 8,
-                callback: (value) => `${value}m`,
-              },
-            },
-          },
+          }),
         },
-        plugins: [openPeriodPlugin(closed, colours)],
-      });
+        scales: {
+          x: axisX(c),
+          // The axis is cut, not zero based. On a bar chart that would be
+          // indefensible, because length encodes the value. On a time series
+          // line the reader is following movement, and the scenarios sit
+          // within three per cent of each other: a zero baseline would squeeze
+          // them into an unreadable band. The floor is derived from the data,
+          // never picked to flatter it.
+          y: axisY(c, { beginAtZero: false, min: axisFloor, ticks: { color: c.inkSoft, font: { size: 11.5 }, padding: 8, callback: (v) => `${v}m` } }),
+        },
+      },
+      plugins: [openPeriodPlugin(closed, c)],
+    });
 
-      return { series: { ly, budget, actual, forecast } };
-    },
-    destroy() {
-      if (chart) chart.destroy();
-      chart = null;
-    },
-  };
+    return { chart, series: full, shown: Object.keys(shownSeries).filter((k) => shownSeries[k]) };
+  });
 }

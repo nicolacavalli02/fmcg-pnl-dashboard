@@ -490,6 +490,61 @@ check(
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// 10. The scenario model in js/state.js
+//     Pure functions, so they can be held to account here even though the
+//     module serves the page. The precedence rule and the honest-period rule
+//     are the two things a reader relies on without ever seeing them.
+// ---------------------------------------------------------------------------
+
+const { resolveBasis, primaryOf, fromHash, toHash } = await import("../state.js");
+const baseState = {
+  view: "performance",
+  scenarios: ["cy_actual", "budget", "ly_actual", "forecast"],
+  compare: "budget",
+  period: "ytd",
+  month: null,
+  channels: [],
+  customers: [],
+  categories: [],
+  drill: [],
+};
+
+check("actuals are read when present", primaryOf(["budget", "cy_actual", "ly_actual"]) === "cy_actual");
+check("the estimate is read when actuals are off", primaryOf(["budget", "forecast"]) === "forecast");
+check("the plan is read when only plan and last year remain", primaryOf(["ly_actual", "budget"]) === "budget");
+
+const ytdBasis = resolveBasis(dataset, baseState);
+check("year to date reads the actual against the plan", ytdBasis.primary === "cy_actual" && ytdBasis.compare === "budget" && !ytdBasis.substituted);
+
+const fyBasis = resolveBasis(dataset, { ...baseState, period: "fy" });
+check("full year substitutes the estimate for the actual and says so", fyBasis.primary === "forecast" && fyBasis.substituted);
+check("the substitution removes the actual from the screen rather than duplicating the estimate", !fyBasis.shown.includes("cy_actual") && fyBasis.shown.filter((s) => s === "forecast").length === 1);
+
+const collision = resolveBasis(dataset, { ...baseState, period: "fy", compare: "forecast" });
+check("a comparison that collides with the substituted primary switches off", collision.compare === null);
+
+const openMonth = resolveBasis(dataset, { ...baseState, month: dataset.lastClosedMonth + 1 });
+check("a single open month is read from the estimate", openMonth.primary === "forecast" && openMonth.substituted);
+const closedMonth = resolveBasis(dataset, { ...baseState, month: dataset.lastClosedMonth });
+check("a single closed month is read from the actual", closedMonth.primary === "cy_actual" && !closedMonth.substituted);
+
+check("comparing against something not on screen is ignored", resolveBasis(dataset, { ...baseState, scenarios: ["cy_actual"], compare: "budget" }).compare === null);
+check("the primary comes first in display order, the comparison second", resolveBasis(dataset, { ...baseState, scenarios: ["ly_actual", "budget", "cy_actual"], compare: "ly_actual" }).shown.join() === "cy_actual,ly_actual,budget");
+
+const dirty = fromHash("#view=nope&p=weird&m=13&s=foo,budget&c=zzz&drill=bogus:x|channel:discount");
+check("an invalid view in the hash is dropped rather than blanking the page", dirty.view === undefined);
+check("an invalid period and month are dropped", dirty.period === undefined && dirty.month === undefined);
+check("unknown scenarios are filtered out and known ones kept", dirty.scenarios.join() === "budget");
+check("an unknown comparison becomes off, not a crash", dirty.compare === null);
+check("a drill entry on an unknown dimension is dropped", dirty.drill.length === 1 && dirty.drill[0].dim === "channel");
+
+const roundTrip = fromHash("#" + toHash({ ...baseState, scenarios: ["cy_actual", "budget"], compare: null, month: 3, channels: ["discount"] }));
+check("state survives a round trip through the hash", roundTrip.scenarios.join() === "cy_actual,budget" && roundTrip.compare === null && roundTrip.month === 3 && roundTrip.channels.join() === "discount");
+check("the default state serialises to an empty hash", toHash(baseState) === "");
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed} checks passed`);
 if (failures.length) {
   console.log(`${failures.length} FAILED:\n`);
